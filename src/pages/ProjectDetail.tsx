@@ -1,11 +1,38 @@
+// import { useEffect, useState } from "react";
+// import { useParams, useNavigate } from "react-router-dom";
+// import toast from "react-hot-toast";
+// import {
+//   DndContext,
+//   DragEndEvent,
+//   DragOverEvent,
+//   DragStartEvent,
+//   PointerSensor,
+//   useSensor,
+//   useSensors,
+//   closestCorners,
+//   DragOverlay,
+// } from "@dnd-kit/core";
+// import {
+//   SortableContext,
+//   verticalListSortingStrategy,
+//   useSortable,
+// } from "@dnd-kit/sortable";
+// import { CSS } from "@dnd-kit/utilities";
+// import Navbar from "../components/Navbar";
+// import { getProject } from "../api/projects";
+// import { updateTask, deleteTask, createTask } from "../api/tasks";
+// import { Task, Project } from "../types";
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import {
-  DndContext,
+import type {
   DragEndEvent,
   DragOverEvent,
   DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  DndContext,
   PointerSensor,
   useSensor,
   useSensors,
@@ -21,7 +48,7 @@ import { CSS } from "@dnd-kit/utilities";
 import Navbar from "../components/Navbar";
 import { getProject } from "../api/projects";
 import { updateTask, deleteTask, createTask } from "../api/tasks";
-import { Task, Project } from "../types";
+import type { Task, Project } from "../types";
 
 const statusColumns: { key: Task["status"]; label: string }[] = [
   { key: "todo", label: "Todo" },

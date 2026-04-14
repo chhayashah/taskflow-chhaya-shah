@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import { getProjects, createProject, deleteProject } from "../api/projects";
-import { Project } from "../types";
+// import { Project } from "../types";
+import type { Project } from "../types";
 
 interface Props {
   dark: boolean;
