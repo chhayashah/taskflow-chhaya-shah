@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import { AuthResponse, Project, Task, User } from '../types'
+import type { AuthResponse, Project, Task, User } from '../types'
 
 const users: User[] = [
   { id: '1', name: 'Chhaya Shah', email: 'test@example.com' },

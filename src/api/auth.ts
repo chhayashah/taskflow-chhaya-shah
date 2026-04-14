@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { AuthResponse } from '../types'
+import type { AuthResponse } from '../types'
 
 export const loginApi = async (email: string, password: string): Promise<AuthResponse> => {
   const res = await axios.post('/auth/login', { email, password })

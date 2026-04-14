@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { Project } from '../types'
+import type { Project } from '../types'
 
 const getHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem('token')}`,

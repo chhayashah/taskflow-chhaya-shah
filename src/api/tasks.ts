@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { Task } from '../types'
+import type { Task } from '../types'
 
 const getHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem('token')}`,
