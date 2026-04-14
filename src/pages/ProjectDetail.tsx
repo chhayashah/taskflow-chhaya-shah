@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-// import { useNavigate } from "react-router-dom";
 import {
   DndContext,
   DragEndEvent,
@@ -219,11 +218,16 @@ export default function ProjectDetail({ dark, setDark }: Props) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Partial<Task>>(emptyTask);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [taskErrors, setTaskErrors] = useState<{
+    title?: string;
+    due_date?: string;
+  }>({});
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -259,20 +263,36 @@ export default function ProjectDetail({ dark, setDark }: Props) {
     }
   };
 
+  const validateTask = () => {
+    const newErrors: { title?: string; due_date?: string } = {};
+    if (!editingTask.title?.trim()) newErrors.title = "Title is required";
+    else if (editingTask.title.trim().length < 3)
+      newErrors.title = "Title must be at least 3 characters";
+    if (editingTask.due_date) {
+      const due = new Date(editingTask.due_date);
+      if (isNaN(due.getTime())) newErrors.due_date = "Invalid date";
+    }
+    setTaskErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const openCreate = () => {
     setEditingTask(emptyTask);
     setIsEditing(false);
+    setTaskErrors({});
     setShowModal(true);
   };
+
   const openEdit = (task: Task) => {
     setEditingTask(task);
     setIsEditing(true);
+    setTaskErrors({});
     setShowModal(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingTask.title?.trim()) return toast.error("Title is required");
+    if (!validateTask()) return;
     setSaving(true);
     try {
       if (isEditing && editingTask.id) {
@@ -329,13 +349,10 @@ export default function ProjectDetail({ dark, setDark }: Props) {
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
     if (!over) return;
-
     const activeId = active.id as string;
     const overId = over.id as string;
-
     const activeTask = tasks.find((t) => t.id === activeId);
     if (!activeTask) return;
-
     const overColumn = statusColumns.find((col) => col.key === overId);
     if (overColumn && activeTask.status !== overColumn.key) {
       setTasks((prev) =>
@@ -344,7 +361,6 @@ export default function ProjectDetail({ dark, setDark }: Props) {
         ),
       );
     }
-
     const overTask = tasks.find((t) => t.id === overId);
     if (overTask && activeTask.status !== overTask.status) {
       setTasks((prev) =>
@@ -359,11 +375,9 @@ export default function ProjectDetail({ dark, setDark }: Props) {
     const { active, over } = event;
     setActiveTask(null);
     if (!over) return;
-
     const activeId = active.id as string;
     const task = tasks.find((t) => t.id === activeId);
     if (!task) return;
-
     try {
       await updateTask(activeId, { status: task.status });
       toast.success(`Moved to ${task.status.replace("_", " ")}!`);
@@ -373,10 +387,14 @@ export default function ProjectDetail({ dark, setDark }: Props) {
     }
   };
 
-  const filtered =
-    statusFilter === "all"
-      ? tasks
-      : tasks.filter((t) => t.status === statusFilter);
+  const filtered = tasks.filter((t) => {
+    const statusMatch = statusFilter === "all" || t.status === statusFilter;
+    const assigneeMatch =
+      assigneeFilter === "all" ||
+      t.assignee_id === assigneeFilter ||
+      (assigneeFilter === "unassigned" && !t.assignee_id);
+    return statusMatch && assigneeMatch;
+  });
 
   if (loading)
     return (
@@ -422,13 +440,6 @@ export default function ProjectDetail({ dark, setDark }: Props) {
               </p>
             )}
           </div>
-          {/* <button
-            onClick={openCreate}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-all hover:shadow-md active:scale-95"
-          >
-            + Add Task
-          </button> */}
-
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate(`/projects/${id}/stats`)}
@@ -457,7 +468,7 @@ export default function ProjectDetail({ dark, setDark }: Props) {
           </div>
         </div>
 
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-3">
           {["all", "todo", "in_progress", "done"].map((s) => (
             <button
               key={s}
@@ -480,6 +491,18 @@ export default function ProjectDetail({ dark, setDark }: Props) {
               </span>
             </button>
           ))}
+        </div>
+
+        <div className="flex gap-2 mb-6">
+          <select
+            value={assigneeFilter}
+            onChange={(e) => setAssigneeFilter(e.target.value)}
+            className="text-xs px-3 py-1.5 rounded-full border bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+          >
+            <option value="all">All assignees</option>
+            <option value="unassigned">Unassigned</option>
+            <option value="1">Chhaya Shah</option>
+          </select>
         </div>
 
         <DndContext
@@ -564,7 +587,7 @@ export default function ProjectDetail({ dark, setDark }: Props) {
             <h2 className="text-base font-medium text-gray-900 dark:text-white mb-4">
               {isEditing ? "Edit Task" : "New Task"}
             </h2>
-            <form onSubmit={handleSave} className="space-y-4">
+            <form onSubmit={handleSave} className="space-y-4" noValidate>
               <div>
                 <label className="text-sm text-gray-600 dark:text-slate-400 block mb-1">
                   Title
@@ -572,17 +595,29 @@ export default function ProjectDetail({ dark, setDark }: Props) {
                 <input
                   type="text"
                   value={editingTask.title || ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setEditingTask((prev) => ({
                       ...prev,
                       title: e.target.value,
-                    }))
-                  }
+                    }));
+                    if (taskErrors.title)
+                      setTaskErrors((p) => ({ ...p, title: undefined }));
+                  }}
                   placeholder="e.g. Design homepage"
-                  className="w-full border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-slate-700 dark:text-white transition-colors ${
+                    taskErrors.title
+                      ? "border-red-400 dark:border-red-600"
+                      : "border-gray-200 dark:border-slate-600"
+                  }`}
                   autoFocus
                 />
+                {taskErrors.title && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {taskErrors.title}
+                  </p>
+                )}
               </div>
+
               <div>
                 <label className="text-sm text-gray-600 dark:text-slate-400 block mb-1">
                   Description <span className="text-gray-400">(optional)</span>
@@ -600,6 +635,7 @@ export default function ProjectDetail({ dark, setDark }: Props) {
                   className="w-full border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                 />
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm text-gray-600 dark:text-slate-400 block mb-1">
@@ -640,6 +676,26 @@ export default function ProjectDetail({ dark, setDark }: Props) {
                   </select>
                 </div>
               </div>
+
+              <div>
+                <label className="text-sm text-gray-600 dark:text-slate-400 block mb-1">
+                  Assignee <span className="text-gray-400">(optional)</span>
+                </label>
+                <select
+                  value={editingTask.assignee_id || ""}
+                  onChange={(e) =>
+                    setEditingTask((prev) => ({
+                      ...prev,
+                      assignee_id: e.target.value,
+                    }))
+                  }
+                  className="w-full border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">Unassigned</option>
+                  <option value="1">Chhaya Shah</option>
+                </select>
+              </div>
+
               <div>
                 <label className="text-sm text-gray-600 dark:text-slate-400 block mb-1">
                   Due date <span className="text-gray-400">(optional)</span>
@@ -647,15 +703,27 @@ export default function ProjectDetail({ dark, setDark }: Props) {
                 <input
                   type="date"
                   value={editingTask.due_date || ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setEditingTask((prev) => ({
                       ...prev,
                       due_date: e.target.value,
-                    }))
-                  }
-                  className="w-full border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    }));
+                    if (taskErrors.due_date)
+                      setTaskErrors((p) => ({ ...p, due_date: undefined }));
+                  }}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-slate-700 dark:text-white transition-colors ${
+                    taskErrors.due_date
+                      ? "border-red-400 dark:border-red-600"
+                      : "border-gray-200 dark:border-slate-600"
+                  }`}
                 />
+                {taskErrors.due_date && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {taskErrors.due_date}
+                  </p>
+                )}
               </div>
+
               <div className="flex justify-end gap-2 pt-1">
                 <button
                   type="button"
